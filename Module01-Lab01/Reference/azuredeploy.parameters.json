@@ -1,0 +1,27 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "ActionGroupEmailRecipient": { "value": "dirk.brinkmann@outlook.com" },
+    "ActionGroupName": { "value": "workshopactiongroup" },
+    "ActionGroupShortName": { "value": "wsag" },
+    "adminPassword": { "value": "Azure12345678" },
+    "adminUserName": { "value": "azureuser" },
+    "LogicApp1Name": { "value": "workshopLogicApp1" },
+    "NSGName": { "value": "workshopnsg" },
+    "subnetName": { "value": "workshopsubnet" },
+    "VM1domainNameLabel": { "value": "workshopvm120180824" },
+    "VM1Name": { "value": "workshopvm1" },
+    "VM1NetworkInterfaceName": { "value": "vm1nic" },
+    "VM1OSDiskName": { "value": "workshopvm1osdisk" },
+    "VM1PublicIPAddressName": { "value": "vm1publicip" },
+    "VM2domainNameLabel": { "value": "workshopvm220180824" },
+    "VM2Name": { "value": "workshopvm2" },
+    "VM2NetworkInterfaceName": { "value": "vm2nic" },
+    "VM2OSDiskName": { "value": "workshopvm2osdisk" },
+    "VM2PublicIPAddressName": { "value": "vm2publicip" },
+    "VMSize": { "value": "Standard_D2s_v3" },
+    "vnetName": { "value": "workshopvnet" },
+    "WorkspaceName": { "value": "workshopworkspace1" }
+  }
+}

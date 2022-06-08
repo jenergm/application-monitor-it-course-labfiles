@@ -1,0 +1,628 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "ActionGroupEmailRecipient": {
+      "type": "string",
+      "metadata": {
+        "description": "Email address for Action Group"
+      }
+    },
+    "ActionGroupName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of Action Group"
+      }
+    },
+    "ActionGroupShortName": {
+      "type": "string",
+      "metadata": {
+        "description": "Action Group Shortname"
+      }
+    },
+    "adminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Admin Password"
+      }
+    },
+    "adminUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of Windows Admin"
+      }
+    },
+    "LogicApp1Name": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of Logic App 1"
+      }
+    },
+    "NSGName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of NSG"
+      }
+    },
+    "subnetName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of Subnet"
+      }
+    },
+    "VM1domainNameLabel": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of public IP Adress Domain label"
+      }
+    },
+    "VM1Name": {
+      "type": "string",
+      "metadata": {
+        "description": "VM Name"
+      }
+    },
+    "VM1NetworkInterfaceName": {
+      "type": "string",
+      "metadata": {
+        "description": "VM NIC name"
+      }
+    },
+    "VM1OSDiskName": {
+      "metadata": {
+        "description": "The name of VM OS Disk"
+      },
+      "type": "string"
+    },
+    "VM1PublicIPAddressName": {
+      "type": "string",
+      "metadata": {
+        "description": "VM public IP Address Name"
+      }
+    },
+    "VM2domainNameLabel": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of public IP Adress Domain label"
+      }
+    },
+    "VM2Name": {
+      "type": "string",
+      "metadata": {
+        "description": "VM Name"
+      }
+    },
+    "VM2NetworkInterfaceName": {
+      "type": "string",
+      "metadata": {
+        "description": "VM NIC name"
+      }
+    },
+    "VM2OSDiskName": {
+      "metadata": {
+        "description": "The name of VM OS Disk"
+      },
+      "type": "string"
+    },
+    "VM2PublicIPAddressName": {
+      "type": "string",
+      "metadata": {
+        "description": "VM public IP Address Name"
+      }
+    },
+    "VMSize": {
+      "type": "string",
+      "metadata": {
+        "description": "VM Size"
+      }
+    },
+    "vnetName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of virtual Network"
+      }
+    },
+    "WorkspaceName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of Log Analytics Workspace"
+      }
+    }
+  },
+  "resources": [
+    {
+      "properties": {
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {},
+          "triggers": {
+            "manual": {
+              "type": "Request",
+              "kind": "Http",
+              "inputs": {
+                "schema": {}
+              }
+            }
+          },
+          "actions": {
+            "Compose": {
+              "runAfter": {},
+              "type": "Compose",
+              "inputs": "@triggerBody()"
+            }
+          },
+          "outputs": {}
+        },
+        "parameters": {}
+      },
+      "resources": [
+        {
+          "type": "providers/diagnosticSettings",
+          "name": "Microsoft.Insights/Diagnostic",
+          "dependsOn": [
+            "[resourceId('Microsoft.Logic/workflows',parameters('LogicApp1Name'))]"
+          ],
+          "apiVersion": "2017-05-01-preview",
+          "properties": {
+            "name": "DiagnosticSettings",
+            "workspaceId": "[resourceId(resourceGroup().name,'microsoft.operationalinsights/workspaces',parameters('WorkspaceName'))]",
+            "logs": [
+              {
+                "category": "WorkflowRuntime",
+                "enabled": true,
+                "retentionPolicy": {
+                  "days": 0,
+                  "enabled": false
+                }
+              }
+            ],
+            "metrics": [
+              {
+                "timeGrain": "PT1M",
+                "enabled": true,
+                "retentionPolicy": {
+                  "enabled": false,
+                  "days": 0
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "dependsOn": [
+        "[resourceId(resourceGroup().name,'microsoft.operationalinsights/workspaces',parameters('WorkspaceName'))]"
+      ],
+      "apiVersion": "2017-07-01",
+      "name": "[parameters('LogicApp1Name')]",
+      "type": "Microsoft.Logic/workflows",
+      "location": "[resourceGroup().location]",
+      "tags": { "displayName": "Workshop - Logic App 1" }
+    },
+
+    {
+      "properties": {
+        "sku": {
+          "name": "standalone"
+        },
+        "retentionInDays": 31,
+        "features": {
+          "legacy": 0,
+          "searchVersion": 1
+        }
+      },
+      "apiVersion": "2017-03-15-preview",
+      "name": "[parameters('WorkspaceName')]",
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "tags": { "displayName": "Workshop - Log Analytics Workspace" },
+      "location": "[resourceGroup().location]"
+    },
+    {
+      "comments": "Default Action Group for generic technical Alerting",
+      "type": "Microsoft.insights/actionGroups",
+      "name": "[parameters('ActionGroupName')]",
+      "apiVersion": "2018-03-01",
+      "location": "Global",
+      "tags": { "displayName": "Workshop - Generic Action Group" },
+      "scale": null,
+      "properties": {
+        "groupShortName": "[parameters('ActionGroupShortName')]",
+        "enabled": true,
+        "emailReceivers": [
+          {
+            "name": "WorkShopMail",
+            "emailAddress": "[parameters('ActionGroupEmailRecipient')]",
+            "status": "Enabled"
+          }
+        ],
+        "smsReceivers": [],
+        "webhookReceivers": [],
+        "itsmReceivers": [],
+        "azureAppPushReceivers": [],
+        "automationRunbookReceivers": [],
+        "voiceReceivers": [],
+        "logicAppReceivers": [],
+        "azureFunctionReceivers": []
+      },
+      "dependsOn": [
+      ]
+    },
+    {
+      "comments": "",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[parameters('NSGName')]",
+      "tags": { "displayName": "Workshop - NSG" },
+      "apiVersion": "2018-02-01",
+      "location": "[resourceGroup().location]",
+      "scale": null,
+      "properties": {
+        "securityRules": [
+          {
+            "name": "RDP",
+            "properties": {
+              "protocol": "TCP",
+              "sourcePortRange": "*",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 300,
+              "direction": "Inbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          }
+        ],
+        "defaultSecurityRules": [
+          {
+            "name": "AllowVnetInBound",
+            "properties": {
+              "description": "Allow inbound traffic from all VMs in VNET",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "VirtualNetwork",
+              "destinationAddressPrefix": "VirtualNetwork",
+              "access": "Allow",
+              "priority": 65000,
+              "direction": "Inbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          },
+          {
+            "name": "AllowAzureLoadBalancerInBound",
+            "properties": {
+              "description": "Allow inbound traffic from azure load balancer",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "AzureLoadBalancer",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 65001,
+              "direction": "Inbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          },
+          {
+            "name": "DenyAllInBound",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "description": "Deny all inbound traffic",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Deny",
+              "priority": 65500,
+              "direction": "Inbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          },
+          {
+            "name": "AllowVnetOutBound",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "description": "Allow outbound traffic from all VMs to all VMs in VNET",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "VirtualNetwork",
+              "destinationAddressPrefix": "VirtualNetwork",
+              "access": "Allow",
+              "priority": 65000,
+              "direction": "Outbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          },
+          {
+            "name": "AllowInternetOutBound",
+            "properties": {
+              "description": "Allow outbound traffic from all VMs to Internet",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "Internet",
+              "access": "Allow",
+              "priority": 65001,
+              "direction": "Outbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          },
+          {
+            "name": "DenyAllOutBound",
+            "properties": {
+              "description": "Deny all outbound traffic",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Deny",
+              "priority": 65500,
+              "direction": "Outbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          }
+        ]
+      },
+      "dependsOn": []
+    },
+
+    {
+      "apiVersion": "2016-03-30",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "[parameters('VM1PublicIPAddressName')]",
+      "tags": { "displayName": "VM1 - Public IP Configuration" },
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "publicIPAllocationMethod": "Dynamic",
+        "dnsSettings": {
+          "domainNameLabel": "[parameters('vm1domainNameLabel')]"
+        }
+      }
+    },
+    {
+      "apiVersion": "2016-03-30",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "[parameters('VM2PublicIPAddressName')]",
+      "tags": { "displayName": "VM2 - Public IP Configuration" },
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "publicIPAllocationMethod": "Dynamic",
+        "dnsSettings": {
+          "domainNameLabel": "[parameters('vm2domainNameLabel')]"
+        }
+      }
+    },
+    {
+      "apiVersion": "2016-03-30",
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[parameters('vnetName')]",
+      "tags": { "displayName": "Workshop - VNET Configuration" },
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "addressSpace": { "addressPrefixes": [ "10.0.0.0/16" ] },
+        "subnets": [
+          {
+            "name": "[parameters('subnetName')]",
+            "properties": { "addressPrefix": "10.0.0.0/24" }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2016-03-30",
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[parameters('VM1NetworkInterfaceName')]",
+      "tags": { "displayName": "VM1 - NIC Configuration" },
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/publicIPAddresses/', parameters('VM1PublicIPAddressName'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks/', parameters('vnetName'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": { "id": "[resourceId('Microsoft.Network/publicIPAddresses',parameters('VM1PublicIPAddressName'))]" },
+              "subnet": { "id": "[variables('subnetRef')]" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2016-03-30",
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[parameters('VM2NetworkInterfaceName')]",
+      "tags": { "displayName": "VM2 - NIC Configuration" },
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/publicIPAddresses/', parameters('VM2PublicIPAddressName'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks/', parameters('vnetName'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": { "id": "[resourceId('Microsoft.Network/publicIPAddresses',parameters('VM2PublicIPAddressName'))]" },
+              "subnet": { "id": "[variables('subnetRef')]" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2016-04-30-preview",
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[parameters('VM1Name')]",
+      "location": "[resourceGroup().location]",
+      "tags": { "displayName": "VM1 - VM Configuration" },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkInterfaces/', parameters('VM1NetworkInterfaceName'))]"
+      ],
+      "properties": {
+        "hardwareProfile": { "vmSize": "[parameters('VMSize')]" },
+        "osProfile": {
+          "computerName": "[parameters('VM1Name')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]",
+          "windowsConfiguration": {
+            "provisionVMAgent": true,
+            "enableAutomaticUpdates": true
+          }
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "MicrosoftWindowsServer",
+            "offer": "WindowsServer",
+            "sku": "2016-Datacenter",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "myManagedOSDisk",
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',parameters('VM1NetworkInterfaceName'))]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "apiVersion": "2016-04-30-preview",
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[parameters('VM2Name')]",
+      "location": "[resourceGroup().location]",
+      "tags": { "displayName": "VM2 - VM Configuration" },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkInterfaces/', parameters('VM2NetworkInterfaceName'))]"
+      ],
+      "properties": {
+        "hardwareProfile": { "vmSize": "[parameters('VMSize')]" },
+        "osProfile": {
+          "computerName": "[parameters('VM2Name')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]",
+          "windowsConfiguration": {
+            "provisionVMAgent": true,
+            "enableAutomaticUpdates": true
+          }
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "MicrosoftWindowsServer",
+            "offer": "WindowsServer",
+            "sku": "2016-Datacenter",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "[parameters('VM2OSDiskName')]",
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',parameters('VM2NetworkInterfaceName'))]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "comments": "",
+      "type": "microsoft.devtestlab/schedules",
+      "name": "[variables('VM1ShutdownTask')]",
+      "tags": { "displayName": "VM1 - Shutdown task" },
+      "apiVersion": "2016-05-15",
+      "location": "[resourceGroup().location]",
+      "scale": null,
+      "properties": {
+        "status": "Enabled",
+        "taskType": "ComputeVmShutdownTask",
+        "dailyRecurrence": {
+          "time": "1900"
+        },
+        "timeZoneId": "UTC",
+        "notificationSettings": {
+          "status": "Disabled",
+          "timeInMinutes": 30
+        },
+        "targetResourceId": "[resourceId('Microsoft.Compute/virtualMachines', parameters('VM1Name'))]",
+        "provisioningState": "Succeeded",
+        "uniqueIdentifier": "2a85d40b-2031-4a68-a19d-7bf2eed5afee"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines', parameters('VM1Name'))]"
+      ]
+    },
+
+    {
+      "comments": "",
+      "type": "microsoft.devtestlab/schedules",
+      "name": "[variables('VM2ShutdownTask')]",
+      "tags": { "displayName": "VM2 - Shutdown task" },
+      "apiVersion": "2016-05-15",
+      "location": "[resourceGroup().location]",
+      "scale": null,
+      "properties": {
+        "status": "Enabled",
+        "taskType": "ComputeVmShutdownTask",
+        "dailyRecurrence": {
+          "time": "1900"
+        },
+        "timeZoneId": "UTC",
+        "notificationSettings": {
+          "status": "Disabled",
+          "timeInMinutes": 30
+        },
+        "targetResourceId": "[resourceId('Microsoft.Compute/virtualMachines', parameters('VM2Name'))]",
+        "provisioningState": "Succeeded",
+        "uniqueIdentifier": "2a85d40b-2031-4a68-a19d-7bf2eed5afee"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines', parameters('VM2Name'))]"
+      ]
+    }
+  ],
+  "variables": {
+    "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',parameters('vnetName'))]",
+    "subnetRef": "[concat(variables('vnetID'),'/subnets/', parameters('subnetName'))]",
+    "VM1ShutdownTask": "[concat('shutdown-computevm-', parameters('VM1Name'))]",
+    "VM2ShutdownTask": "[concat('shutdown-computevm-', parameters('VM2Name'))]"
+  }
+}
